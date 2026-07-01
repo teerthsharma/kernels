@@ -139,6 +139,31 @@ def test_scheduled_attention_rejects_cpu_schedule_for_cuda_inputs():
         scheduled_attention(q, q, q, offsets, indices, 16)
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
+def test_scheduled_attention_rejects_non_integer_schedule_tensors():
+    q = torch.empty((64, 32), device="cuda", dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="integer"):
+        scheduled_attention(
+            q,
+            q,
+            q,
+            offsets.to(device="cuda", dtype=torch.float32),
+            indices.to(device="cuda"),
+            16,
+        )
+    with pytest.raises(ValueError, match="integer"):
+        scheduled_attention(
+            q,
+            q,
+            q,
+            offsets.to(device="cuda"),
+            indices.to(device="cuda", dtype=torch.float32),
+            16,
+        )
+
+
 def test_topology_sparse_attention_benchmark_formats_markdown_row():
     from benchmarking.topology_sparse_attention import format_markdown_row
 

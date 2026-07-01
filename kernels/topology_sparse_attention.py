@@ -8,6 +8,7 @@ import triton.language as tl
 
 
 _SUPPORTED_HEAD_DIMS = {16, 32, 64, 128}
+_SCHEDULE_DTYPES = {torch.int32, torch.int64}
 
 
 def _is_power_of_two(value):
@@ -256,6 +257,8 @@ def scheduled_attention(q, k, v, offsets, indices, block_size):
         raise ValueError("offsets must have shape [num_query_blocks + 1]")
     if indices.ndim != 1:
         raise ValueError("indices must be a 1D tensor")
+    if offsets.dtype not in _SCHEDULE_DTYPES or indices.dtype not in _SCHEDULE_DTYPES:
+        raise ValueError("offsets and indices must be integer tensors")
     if not q.is_cuda or not k.is_cuda or not v.is_cuda:
         raise ValueError("q, k, and v must be CUDA tensors")
     if offsets.device != q.device or indices.device != q.device:
