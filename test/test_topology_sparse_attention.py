@@ -10,6 +10,27 @@ from kernels.topology_sparse_attention import (
 )
 
 
+def test_benchmark_utils_defers_optional_pandas_import(monkeypatch):
+    import builtins
+    import importlib
+    import sys
+
+    sys.modules.pop("benchmarking", None)
+    sys.modules.pop("benchmarking.benchmark_utils", None)
+    real_import = builtins.__import__
+
+    def import_without_pandas(name, *args, **kwargs):
+        if name == "pandas" or name.startswith("pandas."):
+            raise ModuleNotFoundError("No module named 'pandas'", name="pandas")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_pandas)
+
+    benchmark_utils = importlib.import_module("benchmarking.benchmark_utils")
+    with pytest.raises(ModuleNotFoundError, match="pandas"):
+        benchmark_utils.compare_benchmarks({"triton": {"kernel": 1.0}})
+
+
 def test_scheduled_attention_is_exported_from_kernels_package():
     from kernels import scheduled_attention
 
