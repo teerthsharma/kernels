@@ -117,8 +117,8 @@ def build_topology_block_schedule(
         indices.extend(sorted(allowed))
         offsets.append(len(indices))
 
-    return torch.tensor(offsets, dtype=torch.int64), torch.tensor(
-        indices, dtype=torch.int64
+    return torch.tensor(offsets, dtype=torch.int64, device=keys.device), torch.tensor(
+        indices, dtype=torch.int64, device=keys.device
     )
 
 

@@ -188,6 +188,39 @@ def test_topology_sparse_attention_benchmark_formats_markdown_row():
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
+def test_topology_schedule_preserves_key_device_for_direct_kernel_use():
+    torch.manual_seed(3)
+    seq = 128
+    head_dim = 32
+    block_size = 32
+    q = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    k = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    v = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    offsets, indices = build_topology_block_schedule(
+        k.float(),
+        block_size=block_size,
+        local_radius_blocks=1,
+        sink_blocks=1,
+        topk_topology_blocks=1,
+    )
+
+    assert offsets.device == k.device
+    assert indices.device == k.device
+
+    expected = dense_masked_attention(
+        q.float(),
+        k.float(),
+        v.float(),
+        offsets.cpu(),
+        indices.cpu(),
+        block_size,
+    )
+    actual = scheduled_attention(q, k, v, offsets, indices, block_size)
+
+    torch.testing.assert_close(actual.float(), expected, rtol=3e-2, atol=3e-2)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
 def test_scheduled_attention_matches_dense_masked_reference():
     torch.manual_seed(0)
     seq = 128
