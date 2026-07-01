@@ -105,6 +105,29 @@ def test_scheduled_attention_rejects_cpu_schedule_for_cuda_inputs():
         scheduled_attention(q, q, q, offsets, indices, 16)
 
 
+def test_topology_sparse_attention_benchmark_formats_markdown_row():
+    from benchmarking.topology_sparse_attention import format_markdown_row
+
+    result = {
+        "seq": 1024,
+        "scheduled_blocks": 59,
+        "dense_blocks": 136,
+        "block_reduction": 0.566,
+        "dense_masked_ms": 2.341,
+        "sdpa_ms": 0.085,
+        "triton_dense_csr_ms": 0.098,
+        "triton_scheduled_ms": 0.094,
+        "sparse_vs_dense_csr": 1.042,
+        "sparse_vs_sdpa": 0.904,
+        "max_abs_error": 0.0009,
+    }
+
+    assert format_markdown_row(result) == (
+        "| 1024 | 59 / 136 | 56.6% | 2.341 | 0.085 | 0.098 | 0.094 | "
+        "1.04x | 0.90x | 0.0009 |"
+    )
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
 def test_scheduled_attention_matches_dense_masked_reference():
     torch.manual_seed(0)
