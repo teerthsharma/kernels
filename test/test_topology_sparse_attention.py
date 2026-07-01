@@ -56,6 +56,40 @@ def test_topology_schedule_adds_persistent_block_outside_local_window():
     ]
 
 
+def test_dense_causal_block_schedule_rejects_non_positive_block_count():
+    with pytest.raises(ValueError, match="num_blocks"):
+        build_dense_causal_block_schedule(0)
+
+
+def test_topology_block_schedule_rejects_negative_structural_parameters():
+    keys = torch.empty((8, 4))
+
+    with pytest.raises(ValueError, match="local_radius_blocks"):
+        build_topology_block_schedule(
+            keys,
+            block_size=2,
+            local_radius_blocks=-1,
+            sink_blocks=0,
+            topk_topology_blocks=0,
+        )
+    with pytest.raises(ValueError, match="sink_blocks"):
+        build_topology_block_schedule(
+            keys,
+            block_size=2,
+            local_radius_blocks=0,
+            sink_blocks=-1,
+            topk_topology_blocks=0,
+        )
+    with pytest.raises(ValueError, match="topk_topology_blocks"):
+        build_topology_block_schedule(
+            keys,
+            block_size=2,
+            local_radius_blocks=0,
+            sink_blocks=0,
+            topk_topology_blocks=-1,
+        )
+
+
 def test_scheduled_attention_rejects_non_positive_block_size():
     q = torch.empty((64, 32), dtype=torch.float16)
     offsets, indices = build_dense_causal_block_schedule(4)

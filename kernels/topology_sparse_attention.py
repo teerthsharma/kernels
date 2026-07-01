@@ -60,6 +60,9 @@ def _zero_dim_persistence_salience(centroids):
 
 def build_dense_causal_block_schedule(num_blocks):
     """Build a lower-triangular CSR schedule over causal key blocks."""
+    if num_blocks <= 0:
+        raise ValueError("num_blocks must be positive")
+
     offsets = [0]
     indices = []
     for q_block in range(num_blocks):
@@ -84,6 +87,12 @@ def build_topology_block_schedule(
         raise ValueError("block_size must be positive")
     if keys.shape[0] % block_size != 0:
         raise ValueError("sequence length must be divisible by block_size")
+    if local_radius_blocks < 0:
+        raise ValueError("local_radius_blocks must be non-negative")
+    if sink_blocks < 0:
+        raise ValueError("sink_blocks must be non-negative")
+    if topk_topology_blocks < 0:
+        raise ValueError("topk_topology_blocks must be non-negative")
 
     num_blocks = keys.shape[0] // block_size
     centroids = keys.reshape(num_blocks, block_size, keys.shape[1]).mean(dim=1)
