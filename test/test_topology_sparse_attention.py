@@ -56,6 +56,55 @@ def test_topology_schedule_adds_persistent_block_outside_local_window():
     ]
 
 
+def test_scheduled_attention_rejects_non_positive_block_size():
+    q = torch.empty((64, 32), dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="block_size"):
+        scheduled_attention(q, q, q, offsets, indices, 0)
+
+
+def test_scheduled_attention_rejects_non_power_of_two_block_size():
+    q = torch.empty((96, 32), dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="block_size"):
+        scheduled_attention(q, q, q, offsets, indices, 24)
+
+
+def test_scheduled_attention_rejects_unsupported_head_dimension():
+    q = torch.empty((64, 24), dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="head dimension"):
+        scheduled_attention(q, q, q, offsets, indices, 16)
+
+
+def test_scheduled_attention_rejects_mismatched_csr_offsets():
+    q = torch.empty((64, 32), dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(3)
+
+    with pytest.raises(ValueError, match="offsets"):
+        scheduled_attention(q, q, q, offsets, indices, 16)
+
+
+def test_scheduled_attention_rejects_cpu_inputs():
+    q = torch.empty((64, 32), dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="CUDA"):
+        scheduled_attention(q, q, q, offsets, indices, 16)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
+def test_scheduled_attention_rejects_cpu_schedule_for_cuda_inputs():
+    q = torch.empty((64, 32), device="cuda", dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(4)
+
+    with pytest.raises(ValueError, match="same device"):
+        scheduled_attention(q, q, q, offsets, indices, 16)
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
 def test_scheduled_attention_matches_dense_masked_reference():
     torch.manual_seed(0)

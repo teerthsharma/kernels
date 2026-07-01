@@ -7,6 +7,13 @@ import triton
 import triton.language as tl
 
 
+_SUPPORTED_HEAD_DIMS = {16, 32, 64, 128}
+
+
+def _is_power_of_two(value):
+    return value > 0 and value & (value - 1) == 0
+
+
 def _zero_dim_persistence_salience(centroids):
     if centroids.ndim != 2:
         raise ValueError("centroids must have shape [num_blocks, dim]")
@@ -228,8 +235,22 @@ def scheduled_attention(q, k, v, offsets, indices, block_size):
         raise ValueError(
             "q, k, and v must have shape [seq, dim] or [batch, heads, seq, dim]"
         )
+    if not _is_power_of_two(block_size):
+        raise ValueError("block_size must be a positive power of two")
     if q.shape[-2] % block_size != 0:
         raise ValueError("sequence length must be divisible by block_size")
+
+    seq, head_dim = q.shape[-2:]
+    if head_dim not in _SUPPORTED_HEAD_DIMS:
+        raise ValueError("head dimension must be one of 16, 32, 64, or 128")
+    if offsets.ndim != 1 or offsets.numel() != seq // block_size + 1:
+        raise ValueError("offsets must have shape [num_query_blocks + 1]")
+    if indices.ndim != 1:
+        raise ValueError("indices must be a 1D tensor")
+    if not q.is_cuda or not k.is_cuda or not v.is_cuda:
+        raise ValueError("q, k, and v must be CUDA tensors")
+    if offsets.device != q.device or indices.device != q.device:
+        raise ValueError("offsets and indices must be on the same device as q")
 
     output_shape = q.shape
     q = q.contiguous()
@@ -237,7 +258,6 @@ def scheduled_attention(q, k, v, offsets, indices, block_size):
     v = v.contiguous()
     offsets = offsets.contiguous()
     indices = indices.contiguous()
-    seq, head_dim = q.shape[-2:]
     q_flat = q.reshape(-1, seq, head_dim)
     k_flat = k.reshape(-1, seq, head_dim)
     v_flat = v.reshape(-1, seq, head_dim)
