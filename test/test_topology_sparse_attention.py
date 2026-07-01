@@ -85,7 +85,30 @@ def test_scheduled_attention_matches_dense_masked_reference():
         block_size,
     )
 
-    torch.testing.assert_close(actual, expected, rtol=3e-2, atol=3e-2)
+    torch.testing.assert_close(actual.float(), expected, rtol=3e-2, atol=3e-2)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
+def test_scheduled_attention_preserves_input_dtype():
+    torch.manual_seed(2)
+    seq = 128
+    head_dim = 32
+    block_size = 32
+    q = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    k = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    v = torch.randn((seq, head_dim), device="cuda", dtype=torch.float16)
+    offsets, indices = build_dense_causal_block_schedule(seq // block_size)
+
+    actual = scheduled_attention(
+        q,
+        k,
+        v,
+        offsets.to(device="cuda"),
+        indices.to(device="cuda"),
+        block_size,
+    )
+
+    assert actual.dtype == q.dtype
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
@@ -127,4 +150,4 @@ def test_scheduled_attention_supports_batch_and_heads():
         block_size,
     )
 
-    torch.testing.assert_close(actual, expected, rtol=3e-2, atol=3e-2)
+    torch.testing.assert_close(actual.float(), expected, rtol=3e-2, atol=3e-2)

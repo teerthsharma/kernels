@@ -241,7 +241,7 @@ def scheduled_attention(q, k, v, offsets, indices, block_size):
     q_flat = q.reshape(-1, seq, head_dim)
     k_flat = k.reshape(-1, seq, head_dim)
     v_flat = v.reshape(-1, seq, head_dim)
-    out = torch.empty_like(q_flat, dtype=torch.float32)
+    out = torch.empty_like(q_flat)
     _scheduled_attention_kernel[(seq // block_size, q_flat.shape[0])](
         q_flat,
         k_flat,
